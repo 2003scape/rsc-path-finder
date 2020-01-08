@@ -27,8 +27,7 @@ this module is safe to use in a game loop as the computation is asynchronous.
 ## example
 ```javascript
 const fs = require('fs');
-const objectLocations = require('./object-locs');
-const wallObjectLocations = require('./wallObject-locs');
+const { gunzipSync } = require('zlib');
 const { Config } = require('@2003scape/rsc-config');
 const { Landscape } = require('@2003scape/rsc-landscape');
 const { PathFinder } = require('./src');
@@ -44,7 +43,11 @@ landscape.loadMem(fs.readFileSync('./land63.mem'),
 landscape.parseArchives();
 
 const pathFinder = new PathFinder(config, landscape);
+const objectLocations =
+    JSON.parse(gunzipSync(fs.readFileSync('./object-locs.json.gz')));
 objectLocations.forEach(obj => pathFinder.addObject(obj));
+
+const wallObjectLocations = require('./wallObject-locs');
 wallObjectLocations.forEach(obj => pathFinder.addWallObject(obj));
 
 // replace the taverly gate with an open gate
