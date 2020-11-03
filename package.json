@@ -1,6 +1,6 @@
 {
   "name": "@2003scape/rsc-path-finder",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "generate paths between points on a runescape classic map",
   "main": "./src/index.js",
   "repository": {
@@ -25,17 +25,17 @@
   "homepage": "https://github.com/2003scape/rsc-path-finder#readme",
   "dependencies": {
     "@misterhat/easystarjs": "^0.5.3",
-    "bitfield": "^3.0.0",
-    "ndarray": "^1.0.18"
+    "bitfield": "^4.0.0",
+    "ndarray": "^1.0.19"
   },
   "peerDependencies": {
-    "@2003scape/rsc-landscape": "^2.0.0"
+    "@2003scape/rsc-landscape": "^2.0.1"
   },
   "optionalDependencies": {
-    "canvas": "^2.6.0"
+    "canvas": "^2.6.1"
   },
   "devDependencies": {
-    "@2003scape/rsc-config": "^1.0.0",
-    "@2003scape/rsc-landscape": "^2.0.0"
+    "@2003scape/rsc-config": "^1.0.1",
+    "@2003scape/rsc-landscape": "^2.0.1"
   }
 }

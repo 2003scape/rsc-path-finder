@@ -1,4 +1,4 @@
-const Bitfield = require('bitfield');
+const Bitfield = require('bitfield').default;
 const PathPainter = require('./path-painter');
 const ndarray = require('ndarray');
 const EasyStar = require('@misterhat/easystarjs');
@@ -18,7 +18,7 @@ const DOORFRAME = 1;
 const DOOR = 2;
 
 class PathFinder {
-    constructor(config, landscape) {
+    constructor(config, landscape, tickRate = 80) {
         this.gameObjects = config.objects;
         this.wallObjects = config.wallObjects;
         this.tiles = config.tiles;
@@ -39,6 +39,8 @@ class PathFinder {
         this.obstacleField = new Bitfield(this.width * this.height);
         this.obstacles = ndarray(this.obstacleField, [this.width, this.height]);
         this.parseLandscape(landscape);
+
+        this.tickRate = tickRate;
 
         this.easystar = new EasyStar.js();
         this.easystar.setGrid(this.obstacles);
@@ -69,8 +71,7 @@ class PathFinder {
     // parse the tile overlays and walls in each sector
     addSector(sector, sectorX, sectorY, sectorZ) {
         const yOffset =
-            (sectorZ * SECTOR_HEIGHT * this.deltaY) +
-            (sectorZ * GAP_SIZE);
+            sectorZ * SECTOR_HEIGHT * this.deltaY + sectorZ * GAP_SIZE;
 
         for (let x = 0; x < SECTOR_WIDTH; x += 1) {
             for (let y = 0; y < SECTOR_HEIGHT; y += 1) {
@@ -79,14 +80,15 @@ class PathFinder {
 
                     this.addTile(
                         tile,
-                        ((sectorX * SECTOR_WIDTH) + x),
-                        ((sectorY * SECTOR_HEIGHT) + y) + yOffset);
+                        sectorX * SECTOR_WIDTH + x,
+                        sectorY * SECTOR_HEIGHT + y + yOffset
+                    );
                 } else {
                     // empty sector
                     this.fillTile(
-                        ((sectorX * SECTOR_WIDTH) + x) * TILE_SIZE,
-                        (((sectorY * SECTOR_HEIGHT) + y) + yOffset) *
-                        TILE_SIZE);
+                        (sectorX * SECTOR_WIDTH + x) * TILE_SIZE,
+                        (sectorY * SECTOR_HEIGHT + y + yOffset) * TILE_SIZE
+                    );
                 }
             }
         }
@@ -103,14 +105,15 @@ class PathFinder {
             }
         }
 
-        x = (this.width / TILE_SIZE) - x - 1;
+        x = this.width / TILE_SIZE - x - 1;
 
         const diagonal = tile.wall.diagonal;
 
         if (diagonal) {
             this.addWallObject({
                 id: diagonal.overlay - 1,
-                x, y,
+                x,
+                y,
                 direction: diagonal.direction === '\\' ? 2 : 3
             });
         }
@@ -120,7 +123,8 @@ class PathFinder {
         if (vertical) {
             this.addWallObject({
                 id: vertical - 1,
-                x, y,
+                x,
+                y,
                 direction: 1
             });
         }
@@ -130,7 +134,8 @@ class PathFinder {
         if (horizontal) {
             this.addWallObject({
                 id: horizontal - 1,
-                x, y,
+                x,
+                y,
                 direction: 0
             });
         }
@@ -139,8 +144,8 @@ class PathFinder {
     // (un)fill a TILE_SIZE^2 in the binary grid entirely. used for diagonals
     // and game objects
     fillTile(x, y, set = true) {
-        for (let i = x; i < (x + TILE_SIZE); i += 1) {
-            for (let j = y; j < (y + TILE_SIZE); j += 1) {
+        for (let i = x; i < x + TILE_SIZE; i += 1) {
+            for (let j = y; j < y + TILE_SIZE; j += 1) {
                 this.obstacles.set(i, j, set);
             }
         }
@@ -148,8 +153,8 @@ class PathFinder {
 
     // convert game position to obstacle map coordinates
     gameCoordsToObstacleCoords({ x, y }) {
-        x = (this.width - ((x + 1) * TILE_SIZE));
-        y = (y * TILE_SIZE);
+        x = this.width - (x + 1) * TILE_SIZE;
+        y = y * TILE_SIZE;
 
         return { x, y };
     }
@@ -194,8 +199,8 @@ class PathFinder {
             for (let i = 0; i < objectDef.height; i += 1) {
                 this.addWallObject({
                     id: objectDef.type === 'closed-door' ? DOOR : DOORFRAME,
-                    x: x + (dx * i),
-                    y: y + (dy * i),
+                    x: x + dx * i,
+                    y: y + dy * i,
                     direction
                 });
             }
@@ -203,7 +208,7 @@ class PathFinder {
             return;
         }
 
-        ({ x, y } = this.gameCoordsToObstacleCoords({x, y}));
+        ({ x, y } = this.gameCoordsToObstacleCoords({ x, y }));
 
         if (y >= this.height || x >= this.width) {
             return;
@@ -217,7 +222,7 @@ class PathFinder {
 
         for (let i = 0; i < width; i += 1) {
             for (let j = 0; j < height; j += 1) {
-                this.fillTile(x + (-i * TILE_SIZE), y + (j * TILE_SIZE));
+                this.fillTile(x + -i * TILE_SIZE, y + j * TILE_SIZE);
             }
         }
     }
@@ -225,7 +230,7 @@ class PathFinder {
     // add wall overlays from the client landscape, as well as
     // wallobject/decorations/boundaries from server definitions.
     addWallObject({ id, x, y, direction }) {
-        ({ x, y } = this.gameCoordsToObstacleCoords({x, y}));
+        ({ x, y } = this.gameCoordsToObstacleCoords({ x, y }));
 
         if (y >= this.height || x >= this.width) {
             return;
@@ -264,9 +269,14 @@ class PathFinder {
 
     // wrap easyastar in a promise
     _easystarFindPath(startPos, endPos) {
-        return new Promise(resolve => {
+        return new Promise((resolve) => {
             this.easystar.findPath(
-                startPos.x, startPos.y, endPos.x, endPos.y, resolve);
+                startPos.x,
+                startPos.y,
+                endPos.x,
+                endPos.y,
+                resolve
+            );
         });
     }
 
@@ -296,7 +306,8 @@ class PathFinder {
     // check if a game coordinate is blocked by objects or horizontal walls
     isTileBlocked(gameX, gameY) {
         let { x, y } = this.gameCoordsToObstacleCoords({
-            x: gameX, y: gameY
+            x: gameX,
+            y: gameY
         });
 
         x += 1;
@@ -318,14 +329,28 @@ class PathFinder {
             let dx = step.x - steps[i + 1].x;
             let dy = step.y - steps[i + 1].y;
 
-            if ((lastDx === -1 && lastDy === 0 && dx === 0 && dy === 1 &&
-                !this.isTileBlocked(step.x + 1, step.y - 1)) ||
-                (lastDx === 1 && lastDy === 0 && dx === 0 && dy === 1 &&
-                !this.isTileBlocked(step.x - 1, step.y - 1)) ||
-                (lastDx === -1 && lastDy === 0 && dx === 0 && dy === -1 &&
-                !this.isTileBlocked(step.x + 1, step.y + 1)) ||
-                (lastDx === 1 && lastDy === 0 && dx === 0 && dy === -1 &&
-                !this.isTileBlocked(step.x - 1, step.y + 1))) {
+            if (
+                (lastDx === -1 &&
+                    lastDy === 0 &&
+                    dx === 0 &&
+                    dy === 1 &&
+                    !this.isTileBlocked(step.x + 1, step.y - 1)) ||
+                (lastDx === 1 &&
+                    lastDy === 0 &&
+                    dx === 0 &&
+                    dy === 1 &&
+                    !this.isTileBlocked(step.x - 1, step.y - 1)) ||
+                (lastDx === -1 &&
+                    lastDy === 0 &&
+                    dx === 0 &&
+                    dy === -1 &&
+                    !this.isTileBlocked(step.x + 1, step.y + 1)) ||
+                (lastDx === 1 &&
+                    lastDy === 0 &&
+                    dx === 0 &&
+                    dy === -1 &&
+                    !this.isTileBlocked(step.x - 1, step.y + 1))
+            ) {
                 continue;
             }
 
@@ -358,6 +383,126 @@ class PathFinder {
         return this.antiAliasSteps(this.obstacleStepsToGameSteps(path));
     }
 
+    getObstacle(gameX, gameY, offsetX, offsetY) {
+        const { x: obstacleX, y: obstacleY } = this.gameCoordsToObstacleCoords({
+            x: gameX,
+            y: gameY
+        });
+
+        return this.obstacles.get(obstacleX + offsetX, obstacleY + offsetY);
+    }
+
+    isValidGameStep({ x: startX, y: startY }, { deltaX, deltaY }) {
+        const endX = startX + deltaX;
+        const endY = startY + deltaY;
+
+        const { x: obstacleX, y: obstacleY } = this.gameCoordsToObstacleCoords({
+            x: endX,
+            y: endY
+        });
+
+        if (
+            this.obstacles.get(obstacleX, obstacleY) &&
+            this.obstacles.get(obstacleX + 1, obstacleY) &&
+            this.obstacles.get(obstacleX, obstacleY + 1) &&
+            this.obstacles.get(obstacleX + 1, obstacleY + 1)
+        ) {
+            return false;
+        }
+
+        if (deltaX === 0 && deltaY === -1) {
+            // north
+            if (this.getObstacle(startX, startY, 0, 0)) {
+                return false;
+            }
+        } else if (deltaX === 1 && deltaY === -1) {
+            // northwest
+            if (
+                this.getObstacle(startX, startY, 0, 0) ||
+                this.getObstacle(endX, startY, 1, 0) ||
+                this.getObstacle(endX, endY, 1, 1)
+            ) {
+                return false;
+            }
+        } else if (deltaX === 1 && deltaY === 0) {
+            // west
+            if (this.getObstacle(endX, startY, 1, 1)) {
+                return false;
+            }
+        } else if (deltaX === 1 && deltaY === 1) {
+            // southwest
+            if (
+                this.getObstacle(startX, endY, 0, 0) ||
+                this.getObstacle(endX, startY, 1, 1) ||
+                this.getObstacle(endX, endY, 1, 0)
+            ) {
+                return false;
+            }
+        } else if (deltaX === 0 && deltaY === 1) {
+            // south
+            if (this.getObstacle(endX, endY, 0, 0)) {
+                return false;
+            }
+        } else if (deltaX === -1 && deltaY === 1) {
+            // southeast
+            if (
+                this.getObstacle(startX, startY, 1, 1) ||
+                this.getObstacle(startX, endY, 1, 0) ||
+                this.getObstacle(endX, endY, 1, 1)
+            ) {
+                return false;
+            }
+        } else if (deltaX === -1 && deltaY === 0) {
+            // east
+            if (this.getObstacle(startX, startY, 1, 1)) {
+                return false;
+            }
+        } else if (deltaX === -1 && deltaY === -1) {
+            // northeast
+            if (
+                this.getObstacle(startX, startY, 1, 0) ||
+                this.getObstacle(startX, endY, 1, 1) ||
+                this.getObstacle(endX, startY, 0, 0)
+            ) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // the beeline between two entities
+    // https://en.wikipedia.org/wiki/Digital_differential_analyzer_(graphics_algorithm)
+    getLineOfSight({ x: startX, y: startY }, { x: endX, y: endY }) {
+        let deltaX = endX - startX;
+        let deltaY = endY - startY;
+        let step;
+
+        if (Math.abs(deltaX) >= Math.abs(deltaY)) {
+            step = Math.abs(deltaX);
+        } else {
+            step = Math.abs(deltaY);
+        }
+
+        deltaX /= step;
+        deltaY /= step;
+
+        const path = [];
+
+        let x = startX;
+        let y = startY;
+        let i = 1;
+
+        while (i <= step) {
+            path.push({ x: Math.floor(x), y: Math.floor(y) });
+            x += deltaX;
+            y += deltaY;
+            i += 1;
+        }
+
+        return path;
+    }
+
     // run a single easystar computation and call tick again.
     tick() {
         this.easystar.calculate();
@@ -371,7 +516,7 @@ class PathFinder {
         } else {
             // if no paths are left, check back in 80ms rather than
             // immediately. this happens 8 times a tick
-            setTimeout(this.boundTick, 80);
+            setTimeout(this.boundTick, this.tickRate);
         }
     }
 
