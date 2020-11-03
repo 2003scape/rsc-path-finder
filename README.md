@@ -80,7 +80,7 @@ pathFinder.start();
 ```
 
 ## api
-### pathFinder = new PathFinder({ objects, wallObjects, tiles }, landscape)
+### pathFinder = new PathFinder(config, landscape, tickRate = 80)
 create a new pathfinding instance.
 
 `config` in the first argument must contain definitions of game and wall objects
@@ -123,6 +123,9 @@ instance.
 
 `landscape` is an instance of
 [rsc-landscape](https://github.com/2003scape/rsc-landscape#landscape--new-landscape).
+
+`tickRate` is how often (in ms) to poll for new paths to find when `findPath`
+isn't active.
 
 ### pathFinder.addObject({ id, x, y, direction })
 add game object to position. `id` corresponds to index in `config.objects`. if
