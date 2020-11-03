@@ -141,8 +141,14 @@ array. if an unblocked wall object is added, remove any existing obstacles
 ### pathFinder.stop()
 enable and disable the pathfinding run loop.
 
-### async pathFinder.findPath({ startX, startY }, { endX, endY })
+### async pathFinder.findPath({ x, y }, { x, y })
 find a path between startPos and endPos. returns an array of game coordinates.
+
+### pathFinder.isValidGameStep({ x, y }, { deltaX, deltaY })
+return true if we can step from startPos in the step direction.
+
+### pathFinder.getLineOfSight({ x, y }, { x, y })
+find a direct diagonal beeline path between two points.
 
 ### pathFinder.toCanvas(path = undefined)
 create a canvas with all of the obstacles filled in with white. if path is
