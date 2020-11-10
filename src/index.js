@@ -324,6 +324,7 @@ class PathFinder {
 
         for (let i = 1; i < steps.length - 1; i += 1) {
             const step = steps[i];
+
             let lastDx = step.x - steps[i - 1].x; // -1 right, 1 left
             let lastDy = step.y - steps[i - 1].y;
             let dx = step.x - steps[i + 1].x;
@@ -401,6 +402,7 @@ class PathFinder {
             y: endY
         });
 
+        // check if the entire destination tile is blocked
         if (
             this.obstacles.get(obstacleX, obstacleY) &&
             this.obstacles.get(obstacleX + 1, obstacleY) &&
@@ -411,12 +413,14 @@ class PathFinder {
         }
 
         if (deltaX === 0 && deltaY === -1) {
-            // north
+            // north. check currrent tile for horizontal (-) wall
             if (this.getObstacle(startX, startY, 0, 0)) {
                 return false;
             }
         } else if (deltaX === 1 && deltaY === -1) {
-            // northwest
+            // northwest, check current tile for horizontal (-) wall, check
+            // left tile for vertical (|) wall, check destination tile for
+            // vertical (|) wall
             if (
                 this.getObstacle(startX, startY, 0, 0) ||
                 this.getObstacle(endX, startY, 1, 0) ||
@@ -425,12 +429,14 @@ class PathFinder {
                 return false;
             }
         } else if (deltaX === 1 && deltaY === 0) {
-            // west
+            // west, check left tile for vertical (|) wall
             if (this.getObstacle(endX, startY, 1, 1)) {
                 return false;
             }
         } else if (deltaX === 1 && deltaY === 1) {
-            // southwest
+            // southwest, check bottom tile for horizontal (-) wall, check
+            // left tile for vertical (|) wall, check destination tile for
+            // horizontal (-) wall
             if (
                 this.getObstacle(startX, endY, 0, 0) ||
                 this.getObstacle(endX, startY, 1, 1) ||
@@ -439,28 +445,30 @@ class PathFinder {
                 return false;
             }
         } else if (deltaX === 0 && deltaY === 1) {
-            // south
+            // south, check bottom tile for horizontal (-) wall
             if (this.getObstacle(endX, endY, 0, 0)) {
                 return false;
             }
         } else if (deltaX === -1 && deltaY === 1) {
-            // southeast
+            // southeast, check current tile for  vertical (|) wall,
+            // check bottom tile for horizontal (-) wall
             if (
                 this.getObstacle(startX, startY, 1, 1) ||
-                this.getObstacle(startX, endY, 1, 0) ||
-                this.getObstacle(endX, endY, 1, 1)
+                this.getObstacle(startX, endY, 1, 0)
             ) {
                 return false;
             }
         } else if (deltaX === -1 && deltaY === 0) {
-            // east
+            // east, check current tile for vertical (|) wall
             if (this.getObstacle(startX, startY, 1, 1)) {
                 return false;
             }
         } else if (deltaX === -1 && deltaY === -1) {
-            // northeast
+            // northeast, check current tile for horizontal (-) wall,
+            // check tile above for vertical (|) wall, check right tile for
+            // horizontal (-) wall
             if (
-                this.getObstacle(startX, startY, 1, 0) ||
+                this.getObstacle(startX, startY, 0, 0) ||
                 this.getObstacle(startX, endY, 1, 1) ||
                 this.getObstacle(endX, startY, 0, 0)
             ) {
